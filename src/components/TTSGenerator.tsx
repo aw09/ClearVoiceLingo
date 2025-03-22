@@ -1,4 +1,27 @@
 import React, { useState, useEffect } from 'react'
+
+interface Voice extends SpeechSynthesisVoice {
+  name: string;
+  lang: string;
+}
+
+interface LanguagePair {
+  id: string;
+  sourceText: string;
+  targetText: string;
+  sourceLang: string;
+  targetLang: string;
+  timestamp: string;
+}
+
+const supportedLanguages = ['en-US', 'es-ES', 'fr-FR', 'de-DE', 'it-IT', 'ja-JP', 'ko-KR', 'zh-CN'] as const;
+
+type SupportedLanguage = typeof supportedLanguages[number];
+
+function isSupportedLanguage(lang: string): lang is SupportedLanguage {
+  return supportedLanguages.includes(lang as SupportedLanguage);
+}
+
 import { getVoices, speak, stopSpeaking } from '../utils/tts'
 import { saveLanguagePairs, getSetting } from '../utils/db'
 import { generateLanguagePair, isApiConfigured } from '../utils/api'
@@ -7,11 +30,11 @@ function TTSGenerator() {
   const [text, setText] = useState('')
   const [sourceLang, setSourceLang] = useState('en-US')
   const [targetLang, setTargetLang] = useState('es-ES')
-  const [sourceVoices, setSourceVoices] = useState([])
-  const [targetVoices, setTargetVoices] = useState([])
-  const [selectedSourceVoice, setSelectedSourceVoice] = useState(null)
-  const [selectedTargetVoice, setSelectedTargetVoice] = useState(null)
-  const [pairs, setPairs] = useState([])
+  const [sourceVoices, setSourceVoices] = useState<Voice[]>([])
+  const [targetVoices, setTargetVoices] = useState<Voice[]>([])
+  const [selectedSourceVoice, setSelectedSourceVoice] = useState<SpeechSynthesisVoice | undefined>(undefined)
+  const [selectedTargetVoice, setSelectedTargetVoice] = useState<SpeechSynthesisVoice | undefined>(undefined)
+  const [pairs, setPairs] = useState<LanguagePair[]>([])
   const [isGenerating, setIsGenerating] = useState(false)
   const [isSpeaking, setIsSpeaking] = useState(false)
   const [currentPairIndex, setCurrentPairIndex] = useState(-1)
@@ -49,7 +72,7 @@ function TTSGenerator() {
   }, [sourceLang, targetLang])
 
   // Helper function to update voices by language
-  const updateVoicesByLanguage = (allVoices, source, target) => {
+  const updateVoicesByLanguage = (allVoices: Voice[], source: string, target: string) => {
     const sourceVoiceList = allVoices.filter(voice => voice.lang.includes(source))
     const targetVoiceList = allVoices.filter(voice => voice.lang.includes(target))
     
@@ -58,16 +81,16 @@ function TTSGenerator() {
     
     // Set default voices if available
     if (sourceVoiceList.length > 0 && !selectedSourceVoice) {
-      setSelectedSourceVoice(sourceVoiceList[0])
+      setSelectedSourceVoice(sourceVoiceList[0] as SpeechSynthesisVoice)
     }
     
     if (targetVoiceList.length > 0 && !selectedTargetVoice) {
-      setSelectedTargetVoice(targetVoiceList[0])
+      setSelectedTargetVoice(targetVoiceList[0] as SpeechSynthesisVoice)
     }
   }
 
   // Generate language pairs from input text
-  const generatePairs = async () => {
+  const generatePairs = async (): Promise<void> => {
     if (!text.trim()) {
       setError('Please enter some text to generate language pairs.')
       return
@@ -86,14 +109,18 @@ function TTSGenerator() {
       }
       
       // Generate translation using API
-      const translationResult = await generateLanguagePair(text, sourceLang, targetLang)
+      const translationResult = await generateLanguagePair(
+        text,
+        sourceLang as SupportedLanguage,
+        targetLang as SupportedLanguage
+      )
       
-      const newPair = {
-        id: Date.now(),
+      const newPair: LanguagePair = {
+        id: Date.now().toString(),
         sourceText: text,
         targetText: translationResult.targetText,
-        sourceLang,
-        targetLang,
+        sourceLang: sourceLang as LanguagePair['sourceLang'],
+        targetLang: targetLang as LanguagePair['targetLang'],
         timestamp: new Date().toISOString()
       }
       
@@ -105,7 +132,7 @@ function TTSGenerator() {
       
       setText('')
     } catch (err) {
-      setError(`Failed to generate language pairs: ${err.message}`)
+      setError(`Failed to generate language pairs: ${err instanceof Error ? err.message : 'Unknown error'}`)
       console.error('Error generating pairs:', err)
     } finally {
       setIsGenerating(false)
@@ -113,7 +140,7 @@ function TTSGenerator() {
   }
 
   // Speak the current pair
-  const speakPair = async (index) => {
+  const speakPair = async (index: number): Promise<void> => {
     if (index < 0 || index >= pairs.length) return
     
     setCurrentPairIndex(index)

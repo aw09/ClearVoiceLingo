@@ -6,9 +6,11 @@ import Settings from './components/Settings'
 import Header from './components/Header'
 import Footer from './components/Footer'
 
-function App() {
-  const [activeTab, setActiveTab] = useState('tts')
-  const [isTTSSupported, setIsTTSSupported] = useState(true)
+type TabType = 'tts' | 'flashcards' | 'settings';
+
+function App(): React.ReactElement {
+  const [activeTab, setActiveTab] = useState<TabType>('tts')
+  const [isTTSSupported, setIsTTSSupported] = useState<boolean>(true)
 
   useEffect(() => {
     // Check if browser supports speech synthesis

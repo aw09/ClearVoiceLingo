@@ -1,7 +1,15 @@
 // Utility functions for Text-to-Speech functionality
 
+// Define types for speech synthesis
+interface SpeechOptions {
+  voice?: SpeechSynthesisVoice;
+  rate?: number;
+  pitch?: number;
+  volume?: number;
+}
+
 // Get available voices and filter by language
-export function getVoices(lang) {
+export function getVoices(lang?: string): Promise<SpeechSynthesisVoice[]> {
   return new Promise((resolve) => {
     // Function to get and filter voices
     const getVoiceList = () => {
@@ -27,7 +35,7 @@ export function getVoices(lang) {
 }
 
 // Speak text with the specified voice
-export function speak(text, voice, rate = 1, pitch = 1, volume = 1) {
+export function speak(text: string, voice?: SpeechSynthesisVoice, rate = 1, pitch = 1, volume = 1): Promise<void> {
   return new Promise((resolve, reject) => {
     if (!text) {
       reject(new Error('No text provided'))
@@ -60,11 +68,11 @@ export function speak(text, voice, rate = 1, pitch = 1, volume = 1) {
 }
 
 // Stop any ongoing speech
-export function stopSpeaking() {
+export function stopSpeaking(): void {
   window.speechSynthesis.cancel()
 }
 
 // Check if browser supports speech synthesis
-export function isSpeechSynthesisSupported() {
+export function isSpeechSynthesisSupported(): boolean {
   return 'speechSynthesis' in window
 }

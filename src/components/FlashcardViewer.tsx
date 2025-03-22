@@ -1,15 +1,15 @@
 import React, { useState, useEffect } from 'react'
-import { getLanguagePairs, deleteLanguagePair } from '../utils/db'
+import { getLanguagePairs, deleteLanguagePair, LanguagePair } from '../utils/db'
 import { speak, stopSpeaking } from '../utils/tts'
 
-function FlashcardViewer() {
-  const [pairs, setPairs] = useState([])
-  const [currentIndex, setCurrentIndex] = useState(0)
-  const [isFlipped, setIsFlipped] = useState(false)
-  const [isSpeaking, setIsSpeaking] = useState(false)
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState('')
-  const [filterLang, setFilterLang] = useState('')
+function FlashcardViewer(): React.ReactElement {
+  const [pairs, setPairs] = useState<LanguagePair[]>([])
+  const [currentIndex, setCurrentIndex] = useState<number>(0)
+  const [isFlipped, setIsFlipped] = useState<boolean>(false)
+  const [isSpeaking, setIsSpeaking] = useState<boolean>(false)
+  const [isLoading, setIsLoading] = useState<boolean>(true)
+  const [error, setError] = useState<string>('')
+  const [filterLang, setFilterLang] = useState<string>('')
 
   // Load language pairs from IndexedDB
   useEffect(() => {

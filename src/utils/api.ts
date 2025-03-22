@@ -1,6 +1,39 @@
 // API utility functions for OpenAI and Azure OpenAI
 import { getSetting } from './db'
 
+// Define types for language pairs
+export interface LanguagePair {
+  id?: string;
+  sourceText: string;
+  targetText: string;
+  sourceLang: string;
+  targetLang: string;
+  timestamp: string;
+}
+
+// Define types for API responses
+interface OpenAIResponse {
+  choices: {
+    message?: {
+      content?: string;
+    };
+  }[];
+  error?: {
+    message?: string;
+  };
+}
+
+interface AzureOpenAIResponse {
+  choices: {
+    message?: {
+      content?: string;
+    };
+  }[];
+  error?: {
+    message?: string;
+  };
+}
+
 // Check if API keys are configured
 export async function isApiConfigured() {
   const provider = await getSetting('api_provider') || 'openai'
@@ -18,7 +51,7 @@ export async function isApiConfigured() {
 }
 
 // Generate language pair using OpenAI API
-export async function generateLanguagePair(sourceText, sourceLang, targetLang) {
+export async function generateLanguagePair(sourceText: string, sourceLang: LanguageCode, targetLang: LanguageCode): Promise<{sourceText: string, targetText: string, sourceLang: string, targetLang: string, timestamp: string}> {
   try {
     const provider = await getSetting('api_provider') || 'openai'
     
@@ -36,7 +69,7 @@ export async function generateLanguagePair(sourceText, sourceLang, targetLang) {
 }
 
 // Generate using OpenAI API
-async function generateWithOpenAI(sourceText, sourceLang, targetLang) {
+async function generateWithOpenAI(sourceText: string, sourceLang: LanguageCode, targetLang: LanguageCode): Promise<{sourceText: string, targetText: string, sourceLang: string, targetLang: string, timestamp: string}> {
   const apiKey = await getSetting('openai_api_key')
   
   if (!apiKey) {
@@ -88,7 +121,7 @@ async function generateWithOpenAI(sourceText, sourceLang, targetLang) {
 }
 
 // Generate using Azure OpenAI API
-async function generateWithAzure(sourceText, sourceLang, targetLang) {
+async function generateWithAzure(sourceText: string, sourceLang: LanguageCode, targetLang: LanguageCode): Promise<{sourceText: string, targetText: string, sourceLang: string, targetLang: string, timestamp: string}> {
   const apiKey = await getSetting('azure_api_key')
   const region = await getSetting('azure_region')
   
@@ -144,8 +177,7 @@ async function generateWithAzure(sourceText, sourceLang, targetLang) {
 }
 
 // Helper function to get language name from code
-function getLanguageName(langCode) {
-  const languages = {
+const languages = {
     'en-US': 'English',
     'es-ES': 'Spanish',
     'fr-FR': 'French',
@@ -154,7 +186,12 @@ function getLanguageName(langCode) {
     'ja-JP': 'Japanese',
     'ko-KR': 'Korean',
     'zh-CN': 'Chinese'
-  }
-  
-  return languages[langCode] || langCode
+  } as const
+
+  type LanguageCode = keyof typeof languages
+
+  function getLanguageName(langCode: LanguageCode): string {
+  return languages[langCode] || 'Unknown';
 }
+
+export type { LanguageCode }
