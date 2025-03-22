@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { getVoices, speak, stopSpeaking } from '../utils/tts'
-import { saveLanguagePairs } from '../utils/db'
+import { saveLanguagePairs, getSetting } from '../utils/db'
+import { generateLanguagePair, isApiConfigured } from '../utils/api'
 
 function TTSGenerator() {
   const [text, setText] = useState('')
@@ -76,12 +77,21 @@ function TTSGenerator() {
     setIsGenerating(true)
     
     try {
-      // In a real app, this would call an LLM API to generate pairs
-      // For this demo, we'll just create a simple pair from the input text
+      // Check if API is configured
+      const apiConfigured = await isApiConfigured()
+      
+      if (!apiConfigured) {
+        setError('API key not configured. Please set up your API key in Settings.')
+        return
+      }
+      
+      // Generate translation using API
+      const translationResult = await generateLanguagePair(text, sourceLang, targetLang)
+      
       const newPair = {
         id: Date.now(),
         sourceText: text,
-        targetText: `[Translation of "${text}" in ${targetLang}]`,
+        targetText: translationResult.targetText,
         sourceLang,
         targetLang,
         timestamp: new Date().toISOString()
@@ -95,7 +105,7 @@ function TTSGenerator() {
       
       setText('')
     } catch (err) {
-      setError('Failed to generate language pairs. Please try again.')
+      setError(`Failed to generate language pairs: ${err.message}`)
       console.error('Error generating pairs:', err)
     } finally {
       setIsGenerating(false)

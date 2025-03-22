@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { isSpeechSynthesisSupported } from './utils/tts'
 import TTSGenerator from './components/TTSGenerator'
 import FlashcardViewer from './components/FlashcardViewer'
+import Settings from './components/Settings'
 import Header from './components/Header'
 import Footer from './components/Footer'
 
@@ -29,25 +30,34 @@ function App() {
           <div className="inline-flex rounded-md shadow-sm" role="group">
             <button
               type="button"
-              className={`px-4 py-2 text-sm font-medium rounded-l-lg ${activeTab === 'tts' ? 'bg-primary-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'}`}
+              className={`px-4 py-2 text-sm font-medium ${activeTab === 'tts' ? 'bg-primary-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'} ${activeTab === 'tts' ? '' : 'border-r border-gray-200'} rounded-l-lg`}
               onClick={() => setActiveTab('tts')}
             >
               Text-to-Speech
             </button>
             <button
               type="button"
-              className={`px-4 py-2 text-sm font-medium rounded-r-lg ${activeTab === 'flashcards' ? 'bg-primary-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'}`}
+              className={`px-4 py-2 text-sm font-medium ${activeTab === 'flashcards' ? 'bg-primary-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'} ${activeTab === 'flashcards' ? '' : 'border-r border-gray-200'}`}
               onClick={() => setActiveTab('flashcards')}
             >
               Flashcards
+            </button>
+            <button
+              type="button"
+              className={`px-4 py-2 text-sm font-medium rounded-r-lg ${activeTab === 'settings' ? 'bg-primary-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'}`}
+              onClick={() => setActiveTab('settings')}
+            >
+              Settings
             </button>
           </div>
         </div>
         
         {activeTab === 'tts' ? (
           <TTSGenerator />
-        ) : (
+        ) : activeTab === 'flashcards' ? (
           <FlashcardViewer />
+        ) : (
+          <Settings />
         )}
       </main>
       
