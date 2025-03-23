@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { SupportedLanguages, SupportedLanguageCode } from "../models/languages";
 import { TTSPair, saveTTSPair, getTTSPairs, deleteTTSPair } from "../utils/db";
 
@@ -40,6 +40,7 @@ function TTSGenerator() {
   const [rate, setRate] = useState(1);
   const [error, setError] = useState("");
   const [showTTSMenu, setShowTTSMenu] = useState(false);
+  const isSpeakingRef = useRef(false);
 
   // Load available voices and TTS pairs when component mounts
   useEffect(() => {
@@ -284,50 +285,32 @@ function TTSGenerator() {
 
   // Speak all pairs sequentially
   const speakAllPairs = async (): Promise<void> => {
-    console.log("Speak all pairs called");
-    if (pairs.length === 0) return;
+    if (!selectedSourceVoice || !selectedTargetVoice) {
+      setError('Please select both source and target voices');
+      return;
+    }
 
-    console.log("Starting speaking all pairs");
+    isSpeakingRef.current = true;
     setIsSpeaking(true);
 
     try {
       for (let i = 0; i < pairs.length; i++) {
-        console.log(`Speaking pair ${i + 1}`);
-        console.log(isSpeaking); // Add this log to check if isSpeaking is true
-        // Stop if user cancels
-        if (!isSpeaking) break;
-
+        if (!isSpeakingRef.current) break;
         setCurrentPairIndex(i);
-        console.log("Setting current pair index to", i); // Add this log t
 
-        // Speak source text
-        await speakWithRetry(pairs[i].sourceText, selectedSourceVoice, 2);
-
-        // Add a small pause between source and target
+        await speakWithRetry(pairs[i].sourceText, selectedSourceVoice);
+        if (!isSpeakingRef.current) break;
         await new Promise((resolve) => setTimeout(resolve, 1000));
 
-        // Stop if user cancels
-        if (!isSpeaking) break;
-
-        // Speak target text
-        await speakWithRetry(pairs[i].targetText, selectedTargetVoice, 2);
-
-        // Add a pause between pairs
+        await speakWithRetry(pairs[i].targetText, selectedTargetVoice);
         if (i < pairs.length - 1) {
           await new Promise((resolve) => setTimeout(resolve, 2000));
         }
-
-        // Stop if user cancels
-        if (!isSpeaking) break;
       }
     } catch (err) {
-      console.error("Error speaking all pairs:", err);
-      setError(
-        `Failed to speak all pairs: ${
-          err instanceof Error ? err.message : "Unknown error"
-        }`
-      );
+      setError(`Failed to speak: ${err instanceof Error ? err.message : 'Unknown error'}`);
     } finally {
+      isSpeakingRef.current = false;
       setIsSpeaking(false);
       setCurrentPairIndex(-1);
     }
