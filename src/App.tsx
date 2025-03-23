@@ -52,12 +52,11 @@ function App(): React.ReactElement {
         
         // Add provider-specific properties if needed
         if (savedApiProvider === 'azure') {
-          const savedAzureRegion = await getSetting('azure_region')
           configureApi({
             ...baseConfig,
             provider: 'azure',
-            azureEndpoint: savedAzureRegion || '',
-            azureDeployment: 'gpt-4', // Default deployment name
+            azureEndpoint: '',
+            azureDeployment: 'gpt4o-copilot', // Default deployment name
             azureApiVersion: '2023-05-15' // Default API version
           })
         } else {

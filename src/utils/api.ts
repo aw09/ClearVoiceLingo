@@ -16,7 +16,8 @@ const getApiInstance = () => {
       const azureConfig = currentConfig as AzureCredentials;
       return new AzureChatOpenAI({
         azureOpenAIApiKey: azureConfig.apiKey,
-        azureOpenAIApiInstanceName: azureConfig.azureEndpoint,
+        azureOpenAIApiInstanceName: azureConfig.azureInstanceName,
+        azureOpenAIEndpoint: azureConfig.azureEndpoint,
         azureOpenAIApiDeploymentName: azureConfig.azureDeployment,
         azureOpenAIApiVersion: azureConfig.azureApiVersion,
         modelName: azureConfig.model

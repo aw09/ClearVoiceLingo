@@ -9,7 +9,7 @@ const getDefaultModelForProvider = (provider: string): string => {
     case 'openai':
       return openaiModels[0] // Default to first model in the list
     case 'azure':
-      return openaiModels[0] // Azure uses OpenAI models
+      return openaiModels[1]
     case 'deepseek':
       return deepseekModels[0]
     case 'anthropic':
@@ -21,7 +21,9 @@ const getDefaultModelForProvider = (provider: string): string => {
 
 function Settings() {
   const [apiKey, setApiKey] = useState('')
-  const [azureRegion, setAzureRegion] = useState('')
+  const [azureInstanceName, setAzureInstanceName] = useState('')
+  const [azureApiVersion, setAzureApiVersion] = useState('2023-05-15')
+  const [azureApiBase, setAzureApiBase] = useState('')
   const [apiProvider, setApiProvider] = useState('openai')
   const [isSaving, setIsSaving] = useState(false)
   const [saveSuccess, setSaveSuccess] = useState(false)
@@ -32,11 +34,15 @@ function Settings() {
     const loadSettings = async () => {
       try {
         const savedApiProvider = await getSetting('api_provider')
-        const savedAzureRegion = await getSetting('azure_region')
+        const savedAzureInstanceName = await getSetting('azure_instance_name')
+        const savedAzureApiVersion = await getSetting('azure_api_version')
+        const savedAzureApiBase = await getSetting('azure_api_base')
         
         // Set provider first so we know which key to load
         if (savedApiProvider) setApiProvider(savedApiProvider)
-        if (savedAzureRegion) setAzureRegion(savedAzureRegion)
+        if (savedAzureInstanceName) setAzureInstanceName(savedAzureInstanceName)
+        if (savedAzureApiVersion) setAzureApiVersion(savedAzureApiVersion)
+        if (savedAzureApiBase) setAzureApiBase(savedAzureApiBase)
         
         // Load the API key based on the provider
         const provider = savedApiProvider || 'openai'
@@ -81,7 +87,8 @@ function Settings() {
       await saveSetting(keyName, apiKey)
       
       // Save other settings
-      await saveSetting('azure_region', azureRegion)
+      await saveSetting('azure_api_version', azureApiVersion)
+      await saveSetting('azure_api_base', azureApiBase)
       await saveSetting('api_provider', apiProvider)
       
       // Configure API with the appropriate credentials based on provider
@@ -100,8 +107,9 @@ function Settings() {
           configureApi({
             ...baseConfig,
             provider: 'azure',
-            azureEndpoint: azureRegion,
-            azureDeployment: 'gpt-4' // Default deployment name
+            azureEndpoint: azureApiBase,
+            azureDeployment: 'gpt4o-copilot', // Default deployment name
+            azureApiVersion: azureApiVersion
           })
         } else {
           // For other providers, use the base configuration
@@ -172,17 +180,42 @@ function Settings() {
         </div>
         
         {apiProvider === 'azure' && (
-          <div className="mb-4">
-            <label htmlFor="azureRegion" className="block text-sm font-medium text-gray-700 mb-1">Azure Region</label>
-            <input
-              type="text"
-              id="azureRegion"
-              className="input w-full"
-              value={azureRegion}
-              onChange={(e) => setAzureRegion(e.target.value)}
-              placeholder="e.g., eastus"
-            />
-          </div>
+          <>
+            <div className="mb-4">
+              <label htmlFor="azureApiBase" className="block text-sm font-medium text-gray-700 mb-1">Azure API Base URL</label>
+              <input
+                type="text"
+                id="azureApiBase"
+                className="input w-full"
+                value={azureApiBase}
+                onChange={(e) => setAzureApiBase(e.target.value)}
+                placeholder="e.g., https://your-resource.openai.azure.com"
+              />
+            </div>
+            {/* azureInstanceName */}
+            <div className="mb-4">
+              <label htmlFor="azureInstanceName" className="block text-sm font-medium text-gray-700 mb-1">Azure Instance Name</label>
+              <input
+                type="text"
+                id="azureInstanceName"
+                className="input w-full"
+                value={azureInstanceName}
+                onChange={(e) => setAzureInstanceName(e.target.value)}
+                placeholder="e.g., your-resource"
+              />
+            </div>
+            <div className="mb-4">
+              <label htmlFor="azureApiVersion" className="block text-sm font-medium text-gray-700 mb-1">Azure API Version</label>
+              <input
+                type="text"
+                id="azureApiVersion"
+                className="input w-full"
+                value={azureApiVersion}
+                onChange={(e) => setAzureApiVersion(e.target.value)}
+                placeholder="e.g., 2023-05-15"
+              />
+            </div>
+          </>
         )}
         <button
           type="submit"
