@@ -8,6 +8,11 @@ interface ClearVoiceDB extends DBSchema {
     value: LanguagePair;
     indexes: { timestamp: string };
   };
+  ttsPairs: {
+    key: string;
+    value: TTSPair;
+    indexes: { timestamp: string };
+  };
   settings: {
     key: string;
     value: {
@@ -15,6 +20,18 @@ interface ClearVoiceDB extends DBSchema {
       value: any;
     };
   };
+}
+
+// Define types for TTS pairs
+export interface TTSPair {
+  id: string;
+  text: string;
+  voice: {
+    name: string;
+    lang: string;
+  };
+  rate: number;
+  timestamp: string;
 }
 
 // Define types for language pairs
@@ -29,7 +46,7 @@ export interface LanguagePair {
 
 // Database name and version
 const DB_NAME = 'clearvoicelingo-db'
-const DB_VERSION = 1
+const DB_VERSION = 2
 
 // Open the database connection
 async function openDatabase(): Promise<IDBPDatabase<ClearVoiceDB>> {
@@ -39,6 +56,11 @@ async function openDatabase(): Promise<IDBPDatabase<ClearVoiceDB>> {
       if (!db.objectStoreNames.contains('languagePairs')) {
         const pairsStore = db.createObjectStore('languagePairs', { keyPath: 'id' })
         pairsStore.createIndex('timestamp', 'timestamp')
+      }
+
+      if (!db.objectStoreNames.contains('ttsPairs')) {
+        const ttsStore = db.createObjectStore('ttsPairs', { keyPath: 'id' })
+        ttsStore.createIndex('timestamp', 'timestamp')
       }
       
       if (!db.objectStoreNames.contains('settings')) {
@@ -111,4 +133,27 @@ export async function getSetting(key: string): Promise<any> {
   const db = await openDatabase()
   const setting = await db.get('settings', key)
   return setting ? setting.value : null
+}
+
+// Save TTS pair to IndexedDB
+export async function saveTTSPair(pair: TTSPair): Promise<boolean> {
+  const db = await openDatabase()
+  const tx = db.transaction('ttsPairs', 'readwrite')
+  const store = tx.objectStore('ttsPairs')
+  await store.put(pair)
+  await tx.done
+  return true
+}
+
+// Get all TTS pairs from IndexedDB
+export async function getTTSPairs(): Promise<TTSPair[]> {
+  const db = await openDatabase()
+  return db.getAll('ttsPairs')
+}
+
+// Delete a TTS pair by ID
+export async function deleteTTSPair(id: string): Promise<boolean> {
+  const db = await openDatabase()
+  await db.delete('ttsPairs', id)
+  return true
 }

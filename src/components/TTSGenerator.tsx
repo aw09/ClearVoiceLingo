@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { SupportedLanguages, SupportedLanguageCode } from "../models/languages";
+import { TTSPair, saveTTSPair, getTTSPairs, deleteTTSPair } from "../utils/db";
+
 interface Voice extends SpeechSynthesisVoice {
   name: string;
   lang: string;
@@ -31,14 +33,27 @@ function TTSGenerator() {
     SpeechSynthesisVoice | undefined
   >(undefined);
   const [pairs, setPairs] = useState<LanguagePair[]>([]);
+  const [ttsPairs, setTTSPairs] = useState<TTSPair[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [currentPairIndex, setCurrentPairIndex] = useState(-1);
   const [rate, setRate] = useState(1);
   const [error, setError] = useState("");
+  const [showTTSMenu, setShowTTSMenu] = useState(false);
 
-  // Load available voices when component mounts
+  // Load available voices and TTS pairs when component mounts
   useEffect(() => {
+    // Load saved TTS pairs
+    const loadTTSPairs = async () => {
+      try {
+        const savedPairs = await getTTSPairs();
+        setTTSPairs(savedPairs);
+      } catch (err) {
+        console.error('Error loading TTS pairs:', err);
+      }
+    };
+    
+    loadTTSPairs();
     const loadVoices = async () => {
       try {
         const allVoices = await getVoices();
@@ -159,6 +174,28 @@ function TTSGenerator() {
     }
   };
 
+  // Save TTS pair
+  const saveTTS = async (text: string, voice: SpeechSynthesisVoice) => {
+    try {
+      const ttsPair: TTSPair = {
+        id: Date.now().toString() + Math.random().toString(36).substring(2, 9),
+        text,
+        voice: {
+          name: voice.name,
+          lang: voice.lang
+        },
+        rate,
+        timestamp: new Date().toISOString()
+      };
+      
+      await saveTTSPair(ttsPair);
+      setTTSPairs([...ttsPairs, ttsPair]);
+    } catch (err) {
+      console.error('Error saving TTS pair:', err);
+      setError('Failed to save TTS pair');
+    }
+  };
+
   // Speak the current pair
   const speakPair = async (index: number): Promise<void> => {
     if (index < 0 || index >= pairs.length) return;
@@ -187,16 +224,22 @@ function TTSGenerator() {
     };
 
     try {
-      // Speak source text
+      // Speak source text and save to IndexedDB
       await speakWithRetry(pairs[index].sourceText, selectedSourceVoice);
+      if (selectedSourceVoice) {
+        await saveTTS(pairs[index].sourceText, selectedSourceVoice);
+      }
 
       // Add a small pause between source and target
       await new Promise((resolve) => setTimeout(resolve, 1000));
 
       // Check if we're still playing (not stopped by user)
       if (isCurrentlyPlaying) {
-        // Speak target text
+        // Speak target text and save to IndexedDB
         await speakWithRetry(pairs[index].targetText, selectedTargetVoice);
+        if (selectedTargetVoice) {
+          await saveTTS(pairs[index].targetText, selectedTargetVoice);
+        }
       }
     } catch (err) {
       console.error("Detailed speaking error:", err);
@@ -292,7 +335,56 @@ function TTSGenerator() {
 
   return (
     <div className="card p-6">
-      <h2 className="text-xl font-semibold mb-4">Text-to-Speech Generator</h2>
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-xl font-semibold">Text-to-Speech Generator</h2>
+        <button
+          className="btn btn-primary"
+          onClick={() => setShowTTSMenu(!showTTSMenu)}
+        >
+          {showTTSMenu ? 'Hide TTS Menu' : 'Show TTS Menu'}
+        </button>
+      </div>
+
+      {showTTSMenu ? (
+        <div className="mb-6">
+          <h3 className="text-lg font-semibold mb-3">Saved TTS Pairs</h3>
+          <div className="space-y-4">
+            {ttsPairs.map((pair) => (
+              <div key={pair.id} className="flex items-center justify-between p-3 border rounded">
+                <div>
+                  <p className="font-medium">{pair.text}</p>
+                  <p className="text-sm text-gray-600">
+                    Voice: {pair.voice.name} ({pair.voice.lang}) - Rate: {pair.rate}
+                  </p>
+                </div>
+                <div className="flex space-x-2">
+                  <button
+                    className="btn btn-sm btn-primary"
+                    onClick={() => {
+                      const voice = sourceVoices.find(v => v.name === pair.voice.name) ||
+                                  targetVoices.find(v => v.name === pair.voice.name);
+                      if (voice) {
+                        speak(pair.text, voice, pair.rate);
+                      }
+                    }}
+                  >
+                    Play
+                  </button>
+                  <button
+                    className="btn btn-sm btn-error"
+                    onClick={async () => {
+                      await deleteTTSPair(pair.id);
+                      setTTSPairs(ttsPairs.filter(p => p.id !== pair.id));
+                    }}
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
 
       {error && (
         <div

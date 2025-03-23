@@ -14,6 +14,7 @@ const getApiInstance = () => {
   switch (currentConfig.provider) {
     case 'azure':
       const azureConfig = currentConfig as AzureCredentials;
+      console.log('Azure config', azureConfig);
       return new AzureChatOpenAI({
         azureOpenAIApiKey: azureConfig.apiKey,
         azureOpenAIApiInstanceName: azureConfig.azureInstanceName,

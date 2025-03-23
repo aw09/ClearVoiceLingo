@@ -87,6 +87,7 @@ function Settings() {
       await saveSetting(keyName, apiKey)
       
       // Save other settings
+      await saveSetting('azure_instance_name', azureInstanceName)
       await saveSetting('azure_api_version', azureApiVersion)
       await saveSetting('azure_api_base', azureApiBase)
       await saveSetting('api_provider', apiProvider)
@@ -107,7 +108,10 @@ function Settings() {
           configureApi({
             ...baseConfig,
             provider: 'azure',
+            azureInstanceName: azureInstanceName,
+            // azureOpenAIApiInstanceName: azureInstanceName,
             azureEndpoint: azureApiBase,
+            // azureOpenAIEndpoint: azureApiBase,
             azureDeployment: 'gpt4o-copilot', // Default deployment name
             azureApiVersion: azureApiVersion
           })

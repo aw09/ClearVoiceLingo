@@ -39,7 +39,7 @@ function App(): React.ReactElement {
         
         // Get provider-specific settings
         const selectedModel = savedApiProvider === 'openai' ? 'gpt-4' :
-                             savedApiProvider === 'azure' ? 'gpt-4' :
+                             savedApiProvider === 'azure' ? 'gpt4o-copilot' :
                              savedApiProvider === 'deepseek' ? 'deepseek-chat' :
                              savedApiProvider === 'anthropic' ? 'claude-3-haiku-20240307' : 'gpt-4'
         
@@ -55,9 +55,10 @@ function App(): React.ReactElement {
           configureApi({
             ...baseConfig,
             provider: 'azure',
-            azureEndpoint: '',
-            azureDeployment: 'gpt4o-copilot', // Default deployment name
-            azureApiVersion: '2023-05-15' // Default API version
+            azureEndpoint: await getSetting('azure_api_base'),
+            azureInstanceName: await getSetting('azure_instance_name'),
+            azureDeployment: 'gpt4o-copilot',
+            azureApiVersion: await getSetting('azure_api_version'),
           })
         } else {
           // For other providers, use the base configuration
@@ -65,6 +66,7 @@ function App(): React.ReactElement {
         }
         
         console.log('API configured successfully on startup')
+        console.log('API configuration:', baseConfig)
       } catch (err) {
         console.error('Error loading API configuration on startup:', err)
       }
