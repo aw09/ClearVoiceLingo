@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react'
-import { isSpeechSynthesisSupported } from './utils/tts'
+import React, { useEffect, useState } from 'react'
+// import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
+import Header from './components/Header'
+import Footer from './components/Footer'
 import TTSGenerator from './components/TTSGenerator'
 import FlashcardViewer from './components/FlashcardViewer'
 import Settings from './components/Settings'
-import Header from './components/Header'
-import Footer from './components/Footer'
+import { initSpeechSynthesis, isSpeechSynthesisSupported } from './utils/tts'
 
 type TabType = 'tts' | 'flashcards' | 'settings';
 
@@ -14,7 +15,13 @@ function App(): React.ReactElement {
 
   useEffect(() => {
     // Check if browser supports speech synthesis
-    setIsTTSSupported(isSpeechSynthesisSupported())
+    const supported = 'speechSynthesis' in window
+    setIsTTSSupported(supported)
+    
+    // Initialize speech synthesis engine
+    if (supported) {
+      initSpeechSynthesis()
+    }
   }, [])
 
   return (

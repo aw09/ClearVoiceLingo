@@ -34,42 +34,119 @@ export function getVoices(lang?: string): Promise<SpeechSynthesisVoice[]> {
   })
 }
 
+// Initialize speech synthesis - call this early to warm up the speech engine
+export function initSpeechSynthesis(): void {
+  if ('speechSynthesis' in window) {
+    // Create a silent utterance to initialize the speech synthesis engine
+    const initUtterance = new SpeechSynthesisUtterance('')
+    window.speechSynthesis.speak(initUtterance)
+    window.speechSynthesis.cancel() // Cancel it immediately
+    
+    // Force load voices
+    window.speechSynthesis.getVoices()
+  }
+}
+
+// Speech queue to manage multiple utterances
+let speechQueue: SpeechSynthesisUtterance[] = []
+let isSpeaking = false
+
+// Process the speech queue
+function processSpeechQueue() {
+  if (speechQueue.length === 0 || isSpeaking) return
+  
+  isSpeaking = true
+  const utterance = speechQueue.shift()!
+  
+  utterance.onend = () => {
+    isSpeaking = false
+    processSpeechQueue() // Process next item in queue
+  }
+  
+  utterance.onerror = (event) => {
+    console.error('Speech synthesis error:', event)
+    isSpeaking = false
+    processSpeechQueue() // Try next item in queue
+  }
+  
+  // Ensure speech synthesis is active
+  if (window.speechSynthesis.paused) {
+    window.speechSynthesis.resume()
+  }
+  
+  window.speechSynthesis.speak(utterance)
+}
+
 // Speak text with the specified voice
+// Add at the top of the file
+let currentUtterance: SpeechSynthesisUtterance | null = null;
+
 export function speak(text: string, voice?: SpeechSynthesisVoice, rate = 1, pitch = 1, volume = 1): Promise<void> {
   return new Promise((resolve, reject) => {
     if (!text) {
       reject(new Error('No text provided'))
       return
     }
-
-    // Create speech utterance
-    const utterance = new SpeechSynthesisUtterance(text)
     
-    // Set voice if provided
+    // Cancel any ongoing speech
+    if (currentUtterance) {
+      window.speechSynthesis.cancel()
+      currentUtterance = null
+    }
+    
+    // Create new utterance
+    const utterance = new SpeechSynthesisUtterance(text)
+    currentUtterance = utterance
+    
     if (voice) {
       utterance.voice = voice
     }
     
-    // Set speech parameters
-    utterance.rate = rate      // Speed of speech (0.1 to 10)
-    utterance.pitch = pitch    // Pitch of speech (0 to 2)
-    utterance.volume = volume  // Volume of speech (0 to 1)
+    utterance.rate = rate
+    utterance.pitch = pitch
+    utterance.volume = volume
     
-    // Set event handlers
-    utterance.onend = () => resolve()
-    utterance.onerror = (error) => reject(error)
+    let retryCount = 0
+    const maxRetries = 3
     
-    // Cancel any ongoing speech
-    window.speechSynthesis.cancel()
+    const startSpeech = () => {
+      utterance.onend = () => {
+        console.log('Speech completed:', text)
+        currentUtterance = null
+        resolve()
+      }
+      
+      utterance.onerror = (error) => {
+        console.error('Speech error:', error)
+        if (error.error === 'interrupted' && retryCount < maxRetries) {
+          retryCount++
+          console.log(`Retrying speech attempt ${retryCount}...`)
+          setTimeout(startSpeech, 300)
+        } else {
+          currentUtterance = null
+          reject(error)
+        }
+      }
+      
+      try {
+        window.speechSynthesis.speak(utterance)
+      } catch (err) {
+        console.error('Speech synthesis error:', err)
+        currentUtterance = null
+        reject(err)
+      }
+    }
     
-    // Speak the text
-    window.speechSynthesis.speak(utterance)
+    // Start speech after a small delay
+    setTimeout(startSpeech, 100)
   })
 }
 
-// Stop any ongoing speech
 export function stopSpeaking(): void {
-  window.speechSynthesis.cancel()
+  if (currentUtterance) {
+    window.speechSynthesis.cancel()
+    currentUtterance = null
+  }
 }
 
 // Check if browser supports speech synthesis

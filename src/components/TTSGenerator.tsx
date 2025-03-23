@@ -136,28 +136,48 @@ function TTSGenerator() {
   const speakPair = async (index: number): Promise<void> => {
     if (index < 0 || index >= pairs.length) return
     
+    let isCurrentlyPlaying = true;
     setCurrentPairIndex(index)
     setIsSpeaking(true)
     
+    const speakWithRetry = async (text: string, voice: SpeechSynthesisVoice | undefined, maxRetries = 2) => {
+      for (let i = 0; i <= maxRetries; i++) {
+        try {
+          if (!voice) throw new Error("No voice selected");
+          await speak(text, voice, rate);
+          return; // 成功したら終了
+        } catch (err) {
+          if (i === maxRetries) throw err;
+          // 少し待ってから再試行
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
+      }
+    };
+    
     try {
       // Speak source text
-      await speak(pairs[index].sourceText, selectedSourceVoice, rate)
+      await speakWithRetry(pairs[index].sourceText, selectedSourceVoice);
       
-      // Small pause between source and target
-      await new Promise(resolve => setTimeout(resolve, 500))
+      // Add a small pause between source and target
+      await new Promise(resolve => setTimeout(resolve, 1000));
       
-      // Speak target text
-      await speak(pairs[index].targetText, selectedTargetVoice, rate)
+      // Check if we're still playing (not stopped by user)
+      if (isCurrentlyPlaying) {
+        // Speak target text
+        await speakWithRetry(pairs[index].targetText, selectedTargetVoice);
+      }
     } catch (err) {
-      setError('Failed to speak text. Please try again.')
-      console.error('Error speaking text:', err)
+      console.error('Detailed speaking error:', err)
+      setError(`Failed to speak text: ${err instanceof Error ? err.message : 'Unknown error'}`)
     } finally {
-      setIsSpeaking(false)
-      setCurrentPairIndex(-1)
+      if (isCurrentlyPlaying) {
+        setIsSpeaking(false)
+        setCurrentPairIndex(-1)
+      }
     }
   }
 
-  // Stop speaking
+  // Update the stop speaking handler to set the local flag
   const handleStopSpeaking = () => {
     stopSpeaking()
     setIsSpeaking(false)
