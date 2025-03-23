@@ -66,7 +66,16 @@ export const generateLanguagePair = async (
     const aiMsg = await api.invoke([
       {
         role: "system",
-        content: `Translate from ${sourceLangName} to ${targetLangName}`,
+        // content: `Translate from ${sourceLangName} to ${targetLangName}`,
+        content: `You are a language bot that generate words to train users vocabulary.
+        You must return in format ${sourceLangName} - ${targetLangName}, one word per line.
+        Example:
+        hello - hola
+        world - mundo
+        good - bueno
+        bye - adiós
+        please - por favor
+        `
       },
       {
         role: "user",
