@@ -99,7 +99,10 @@ export async function deleteLanguagePair(id: string): Promise<boolean> {
 // Save a setting to IndexedDB
 export async function saveSetting(key: string, value: any): Promise<boolean> {
   const db = await openDatabase()
-  await db.put('settings', { id: key, value })
+  const tx = db.transaction('settings', 'readwrite')
+  const store = tx.objectStore('settings')
+  await store.put({ id: key, value })
+  await tx.done
   return true
 }
 
