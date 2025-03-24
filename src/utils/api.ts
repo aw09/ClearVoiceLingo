@@ -14,9 +14,11 @@ const getApiInstance = () => {
   switch (currentConfig.provider) {
     case 'azure':
       const azureConfig = currentConfig as AzureCredentials;
+      console.log('Azure config', azureConfig);
       return new AzureChatOpenAI({
         azureOpenAIApiKey: azureConfig.apiKey,
-        azureOpenAIApiInstanceName: azureConfig.azureEndpoint,
+        azureOpenAIApiInstanceName: azureConfig.azureInstanceName,
+        azureOpenAIEndpoint: azureConfig.azureEndpoint,
         azureOpenAIApiDeploymentName: azureConfig.azureDeployment,
         azureOpenAIApiVersion: azureConfig.azureApiVersion,
         modelName: azureConfig.model
@@ -66,7 +68,16 @@ export const generateLanguagePair = async (
     const aiMsg = await api.invoke([
       {
         role: "system",
-        content: `Translate from ${sourceLangName} to ${targetLangName}`,
+        // content: `Translate from ${sourceLangName} to ${targetLangName}`,
+        content: `You are a language bot that generate words to train users vocabulary.
+        You must return in format ${sourceLangName} - ${targetLangName}, one word per line.
+        Example:
+        hello - hola
+        world - mundo
+        good - bueno
+        bye - adiós
+        please - por favor
+        `
       },
       {
         role: "user",

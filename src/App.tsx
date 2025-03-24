@@ -6,6 +6,8 @@ import TTSGenerator from './components/TTSGenerator'
 import FlashcardViewer from './components/FlashcardViewer'
 import Settings from './components/Settings'
 import { initSpeechSynthesis, isSpeechSynthesisSupported } from './utils/tts'
+import { getSetting } from './utils/db'
+import { configureApi } from './utils/api'
 
 type TabType = 'tts' | 'flashcards' | 'settings';
 
@@ -22,6 +24,55 @@ function App(): React.ReactElement {
     if (supported) {
       initSpeechSynthesis()
     }
+    
+    // Load API configuration on startup
+    const loadApiConfig = async () => {
+      try {
+        // Get the saved API provider
+        const savedApiProvider = await getSetting('api_provider')
+        if (!savedApiProvider) return // No provider configured yet
+        
+        // Get the API key for the provider
+        const keyName = `${savedApiProvider}_api_key`
+        const savedApiKey = await getSetting(keyName)
+        if (!savedApiKey) return // No API key configured yet
+        
+        // Get provider-specific settings
+        const selectedModel = savedApiProvider === 'openai' ? 'gpt-4' :
+                             savedApiProvider === 'azure' ? 'gpt4o-copilot' :
+                             savedApiProvider === 'deepseek' ? 'deepseek-chat' :
+                             savedApiProvider === 'anthropic' ? 'claude-3-haiku-20240307' : 'gpt-4'
+        
+        // Create base configuration
+        const baseConfig = {
+          provider: savedApiProvider,
+          apiKey: savedApiKey,
+          model: selectedModel
+        }
+        
+        // Add provider-specific properties if needed
+        if (savedApiProvider === 'azure') {
+          configureApi({
+            ...baseConfig,
+            provider: 'azure',
+            azureEndpoint: await getSetting('azure_api_base'),
+            azureInstanceName: await getSetting('azure_instance_name'),
+            azureDeployment: 'gpt4o-copilot',
+            azureApiVersion: await getSetting('azure_api_version'),
+          })
+        } else {
+          // For other providers, use the base configuration
+          configureApi(baseConfig as any)
+        }
+        
+        console.log('API configured successfully on startup')
+        console.log('API configuration:', baseConfig)
+      } catch (err) {
+        console.error('Error loading API configuration on startup:', err)
+      }
+    }
+    
+    loadApiConfig()
   }, [])
 
   return (

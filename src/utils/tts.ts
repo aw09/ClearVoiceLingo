@@ -80,6 +80,10 @@ function processSpeechQueue() {
 // Speak text with the specified voice
 // Add at the top of the file
 let currentUtterance: SpeechSynthesisUtterance | null = null;
+// Add handleCancel variable
+let handleCancel: () => void = () => {};
+
+let isStopped = false;
 
 export function speak(text: string, voice?: SpeechSynthesisVoice, rate = 1, pitch = 1, volume = 1): Promise<void> {
   return new Promise((resolve, reject) => {
@@ -87,6 +91,8 @@ export function speak(text: string, voice?: SpeechSynthesisVoice, rate = 1, pitc
       reject(new Error('No text provided'))
       return
     }
+    
+    isStopped = false;
     
     // Cancel any ongoing speech
     if (currentUtterance) {
@@ -108,23 +114,33 @@ export function speak(text: string, voice?: SpeechSynthesisVoice, rate = 1, pitc
     
     let retryCount = 0
     const maxRetries = 3
-    
     const startSpeech = () => {
-      utterance.onend = () => {
-        console.log('Speech completed:', text)
+      // Don't start if stopped
+      if (isStopped) {
         currentUtterance = null
         resolve()
+        return
+      }
+
+      utterance.onend = () => {
+        if (!isStopped) {
+          console.log('Speech completed:', text)
+          currentUtterance = null
+          resolve()
+        }
       }
       
       utterance.onerror = (error) => {
         console.error('Speech error:', error)
-        if (error.error === 'interrupted' && retryCount < maxRetries) {
+        if (!isStopped && error.error === 'interrupted' && retryCount < maxRetries) {
           retryCount++
           console.log(`Retrying speech attempt ${retryCount}...`)
           setTimeout(startSpeech, 300)
         } else {
-          currentUtterance = null
-          reject(error)
+          if (!isStopped) {
+            currentUtterance = null
+            reject(error)
+          }
         }
       }
       
@@ -132,22 +148,36 @@ export function speak(text: string, voice?: SpeechSynthesisVoice, rate = 1, pitc
         window.speechSynthesis.speak(utterance)
       } catch (err) {
         console.error('Speech synthesis error:', err)
-        currentUtterance = null
-        reject(err)
+        if (!isStopped) {
+          currentUtterance = null
+          reject(err)
+        }
       }
     }
+    
+    // Add cleanup function to handle stop
+    // Update handleCancel implementation
+    handleCancel = () => {
+      isStopped = true;
+      if (currentUtterance) {
+        window.speechSynthesis.cancel();
+        currentUtterance = null;
+      }
+      resolve();
+    };
     
     // Start speech after a small delay
     setTimeout(startSpeech, 100)
   })
 }
 
-export function stopSpeaking(): void {
-  if (currentUtterance) {
-    window.speechSynthesis.cancel()
-    currentUtterance = null
+export const stopSpeaking = () => {
+  if (window.speechSynthesis.speaking) {
+    window.speechSynthesis.cancel();
   }
-}
+  currentUtterance = null;
+  isSpeaking = false;
+};
 
 // Check if browser supports speech synthesis
 export function isSpeechSynthesisSupported(): boolean {

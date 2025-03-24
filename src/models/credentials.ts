@@ -25,6 +25,7 @@ export interface OpenAICredentials extends BaseCredentials {
 
 export interface AzureCredentials extends BaseCredentials {
   provider: 'azure';
+  azureInstanceName: string; // Azure Instance Name
   azureEndpoint: string; // Azure OpenAI API Instance Name
   azureDeployment: string; // Azure OpenAI API Deployment Name
   azureApiVersion?: string; // Optional API version
