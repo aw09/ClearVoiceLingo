@@ -66,8 +66,8 @@ export const LanguageResponseSchema = z.object({
         situation: z.string().describe('Usage context (formal/casual/business etc)')
       }),
       pronunciation: z.object({
-        romaji: z.string().optional().describe('Romanized text for Japanese/Chinese'),
-        guide: z.string().describe('Pronunciation explanation'), 
+        romaji: z.string().optional().describe('Romanized text for target language'),
+        guide: z.string().describe('Pronunciation explanation for target language'), 
       })
     }) 
   )

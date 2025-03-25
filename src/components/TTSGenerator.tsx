@@ -258,9 +258,11 @@ function TTSGenerator() {
       setError('Please select both source and target voices');
       return;
     }
+    console.log(`Selected source and target voice: ${selectedSourceVoice.name} and ${selectedTargetVoice.name}`)
 
     isSpeakingRef.current = true;
     setIsSpeaking(true);
+    const timeOut = 0.2;
 
     try {
       for (let i = 0; i < pairs.length; i++) {
@@ -269,11 +271,11 @@ function TTSGenerator() {
 
         await speakWithRetry(pairs[i].sourceText, selectedSourceVoice);
         if (!isSpeakingRef.current) break;
-        await new Promise((resolve) => setTimeout(resolve, 1000));
+        await new Promise((resolve) => setTimeout(resolve, timeOut));
 
         await speakWithRetry(pairs[i].targetText, selectedTargetVoice);
         if (i < pairs.length - 1) {
-          await new Promise((resolve) => setTimeout(resolve, 2000));
+          await new Promise((resolve) => setTimeout(resolve, 1000));
         }
       }
     } catch (err) {

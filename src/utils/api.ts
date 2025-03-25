@@ -70,7 +70,7 @@ export const generateLanguagePair = async (
     const response = await api.invoke([
       {
         role: "system",
-        content: `You are a language learning assistant specializing in translations between ${sourceLangName} and ${targetLangName}. `
+        content: `You are a language learning assistant specializing in translations from source language: '${sourceLangName}' to target language:'${targetLangName}'. `
       },
       {
         role: "user",
