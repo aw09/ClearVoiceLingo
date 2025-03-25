@@ -1,7 +1,7 @@
 import { AzureChatOpenAI, ChatOpenAI } from '@langchain/openai';
 import { ChatDeepSeek } from '@langchain/deepseek';
 import { ChatAnthropic } from '@langchain/anthropic';
-import { SupportedLanguageCode, SupportedLanguages } from '../models/languages';
+import { SupportedLanguageCode, SupportedLanguages, LanguageResponse, LanguageResponseSchema } from '../models/languages';
 import { Credentials, OpenAICredentials, AzureCredentials, DeepseekCredentials, AnthropicCredentials } from '../models/credentials';
 
 let currentConfig: Credentials | null = null;
@@ -11,11 +11,11 @@ const getApiInstance = () => {
     throw new Error('API not configured');
   }
 
+  let baseModel;
   switch (currentConfig.provider) {
     case 'azure':
       const azureConfig = currentConfig as AzureCredentials;
-      console.log('Azure config', azureConfig);
-      return new AzureChatOpenAI({
+      baseModel = new AzureChatOpenAI({
         azureOpenAIApiKey: azureConfig.apiKey,
         azureOpenAIApiInstanceName: azureConfig.azureInstanceName,
         azureOpenAIEndpoint: azureConfig.azureEndpoint,
@@ -26,14 +26,14 @@ const getApiInstance = () => {
     
     case 'deepseek':
       const deepseekConfig = currentConfig as DeepseekCredentials;
-      return new ChatDeepSeek({
+      baseModel = new ChatDeepSeek({
         apiKey: deepseekConfig.apiKey,
         modelName: deepseekConfig.model
       });
     
     case 'anthropic':
       const anthropicConfig = currentConfig as AnthropicCredentials;
-      return new ChatAnthropic({
+      baseModel = new ChatAnthropic({
         anthropicApiKey: anthropicConfig.apiKey,
         modelName: anthropicConfig.model
       });
@@ -41,11 +41,12 @@ const getApiInstance = () => {
     case 'openai':
     default:
       const openaiConfig = currentConfig as OpenAICredentials;
-      return new ChatOpenAI({
+      baseModel = new ChatOpenAI({
         openAIApiKey: openaiConfig.apiKey,
         modelName: openaiConfig.model
       });
   }
+  return baseModel.withStructuredOutput(LanguageResponseSchema);
 };
 
 export const isApiConfigured = () => {
@@ -60,35 +61,24 @@ export const generateLanguagePair = async (
   text: string,
   sourceLang: SupportedLanguageCode,
   targetLang: SupportedLanguageCode
-) => {
+): Promise<Array<LanguageResponse>> => {
   const api = getApiInstance();
   const sourceLangName = SupportedLanguages.find((lang) => lang.code === sourceLang)?.name;
   const targetLangName = SupportedLanguages.find((lang) => lang.code === targetLang)?.name;
+  
   try {
-    const aiMsg = await api.invoke([
+    const response = await api.invoke([
       {
         role: "system",
-        // content: `Translate from ${sourceLangName} to ${targetLangName}`,
-        content: `You are a language bot that generate words to train users vocabulary.
-        You must return in format ${sourceLangName} - ${targetLangName}, one word per line.
-        Example:
-        hello - hola
-        world - mundo
-        good - bueno
-        bye - adiós
-        please - por favor
-        `
+        content: `You are a language learning assistant specializing in translations from source language: '${sourceLangName}' to target language:'${targetLangName}'. `
       },
       {
         role: "user",
-        content: text,
-      },
+        content: text
+      }
     ]);
-    aiMsg;
-
-    return {
-      targetText: aiMsg.content,
-    } as { targetText: string };
+    
+    return response.result;
   } catch (error) {
     console.error('Translation failed:', error);
     throw new Error(`Translation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);

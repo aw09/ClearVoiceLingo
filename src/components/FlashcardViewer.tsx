@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react'
-import { getLanguagePairs, deleteLanguagePair, LanguagePair } from '../utils/db'
+import { getLanguagePairs, deleteLanguagePair } from '../utils/db'
 import { speak, stopSpeaking } from '../utils/tts'
+import { LanguageResponse } from '../models/languages'
 
 function FlashcardViewer(): React.ReactElement {
-  const [pairs, setPairs] = useState<LanguagePair[]>([])
+  const [pairs, setPairs] = useState<LanguageResponse[]>([])
   const [currentIndex, setCurrentIndex] = useState<number>(0)
   const [isFlipped, setIsFlipped] = useState<boolean>(false)
   const [isSpeaking, setIsSpeaking] = useState<boolean>(false)
@@ -31,7 +32,7 @@ function FlashcardViewer(): React.ReactElement {
 
   // Filter pairs by language
   const filteredPairs = filterLang
-    ? pairs.filter(pair => pair.sourceLang === filterLang || pair.targetLang === filterLang)
+    ? pairs.filter(pair => pair.sourceText === filterLang || pair.targetText === filterLang)
     : pairs
 
   // Get current flashcard
@@ -158,12 +159,12 @@ function FlashcardViewer(): React.ReactElement {
             onClick={flipCard}
           >
             <div className={`absolute inset-0 flex flex-col items-center justify-center p-6 border-2 rounded-lg ${isFlipped ? 'hidden' : 'block'} ${isSpeaking ? 'border-primary-500' : 'border-gray-200'}`}>
-              <p className="text-sm text-gray-500 mb-2">{currentPair?.sourceLang}</p>
+              <p className="text-sm text-gray-500 mb-2">{currentPair?.sourceText}</p>
               <p className="text-xl text-center">{currentPair?.sourceText}</p>
               <p className="text-sm text-gray-500 mt-4">Tap to flip</p>
             </div>
             <div className={`absolute inset-0 flex flex-col items-center justify-center p-6 border-2 rounded-lg ${isFlipped ? 'block' : 'hidden'} ${isSpeaking ? 'border-primary-500' : 'border-gray-200'}`}>
-              <p className="text-sm text-gray-500 mb-2">{currentPair?.targetLang}</p>
+              <p className="text-sm text-gray-500 mb-2">{currentPair?.targetText}</p>
               <p className="text-xl text-center">{currentPair?.targetText}</p>
               <p className="text-sm text-gray-500 mt-4">Tap to flip</p>
             </div>

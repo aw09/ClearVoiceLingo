@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { SupportedLanguages, SupportedLanguageCode } from "../models/languages";
+import { SupportedLanguages, SupportedLanguageCode, LanguageResponse } from "../models/languages";
 import { TTSPair, saveTTSPair, getTTSPairs, deleteTTSPair } from "../utils/db";
 
 interface Voice extends SpeechSynthesisVoice {
@@ -7,14 +7,6 @@ interface Voice extends SpeechSynthesisVoice {
   lang: string;
 }
 
-interface LanguagePair {
-  id: string;
-  sourceText: string;
-  targetText: string;
-  sourceLang: string;
-  targetLang: string;
-  timestamp: string;
-}
 
 import { getVoices, speak, stopSpeaking } from "../utils/tts";
 import { saveLanguagePairs, getSetting } from "../utils/db";
@@ -22,8 +14,8 @@ import { generateLanguagePair, isApiConfigured } from "../utils/api";
 
 function TTSGenerator() {
   const [text, setText] = useState("");
-  const [sourceLang, setSourceLang] = useState("en");
-  const [targetLang, setTargetLang] = useState("ja");
+  const [sourceLang, setSourceLang] = useState<SupportedLanguageCode>("en");
+  const [targetLang, setTargetLang] = useState<SupportedLanguageCode>("ja");
   const [sourceVoices, setSourceVoices] = useState<Voice[]>([]);
   const [targetVoices, setTargetVoices] = useState<Voice[]>([]);
   const [selectedSourceVoice, setSelectedSourceVoice] = useState<
@@ -32,7 +24,7 @@ function TTSGenerator() {
   const [selectedTargetVoice, setSelectedTargetVoice] = useState<
     SpeechSynthesisVoice | undefined
   >(undefined);
-  const [pairs, setPairs] = useState<LanguagePair[]>([]);
+  const [pairs, setPairs] = useState<LanguageResponse[]>([]);
   const [ttsPairs, setTTSPairs] = useState<TTSPair[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
@@ -120,48 +112,25 @@ function TTSGenerator() {
     setIsGenerating(true);
 
     try {
-      // Generate translation using API with the entire text
       const translationResult = await generateLanguagePair(
         text.trim(),
-        sourceLang as SupportedLanguageCode,
-        targetLang as SupportedLanguageCode
+        sourceLang,
+        targetLang
       );
 
-      // Process the response which should be in format: source - target
-      // Split by lines and parse each line
-      const responseLines = translationResult.targetText
-        .split("\n")
-        .filter((line) => line.trim() !== "");
-      
-      const newPairs: LanguagePair[] = [...pairs];
+      const newPairs: LanguageResponse[] = translationResult.map(result => ({
+        id: Date.now().toString() + Math.random().toString(36).substring(2, 9),
+        sourceText: result.sourceText,
+        targetText: result.targetText,
+        sourceLang: sourceLang as LanguageResponse["sourceText"],
+        targetLang: targetLang as LanguageResponse["targetText"],
+        timestamp: new Date().toISOString(),
+        pronunciation: result.pronunciation,
+        category: result.category
+      }));
 
-      for (const line of responseLines) {
-        // Parse the line which should be in format: source - target
-        const parts = line.split("-").map(part => part.trim());
-        
-        if (parts.length >= 2) {
-          const sourceText = parts[0];
-          // Join the rest in case there are multiple hyphens
-          const targetText = parts.slice(1).join(" - ").trim();
-          
-          const newPair: LanguagePair = {
-            id: Date.now().toString() + Math.random().toString(36).substring(2, 9),
-            sourceText,
-            targetText,
-            sourceLang: sourceLang as LanguagePair["sourceLang"],
-            targetLang: targetLang as LanguagePair["targetLang"],
-            timestamp: new Date().toISOString(),
-          };
-
-          newPairs.push(newPair);
-        }
-      }
-
-      setPairs(newPairs);
-
-      // Save to IndexedDB
+      setPairs([...pairs, ...newPairs]);
       await saveLanguagePairs(newPairs);
-
       setText("");
     } catch (err) {
       setError(
@@ -289,9 +258,11 @@ function TTSGenerator() {
       setError('Please select both source and target voices');
       return;
     }
+    console.log(`Selected source and target voice: ${selectedSourceVoice.name} and ${selectedTargetVoice.name}`)
 
     isSpeakingRef.current = true;
     setIsSpeaking(true);
+    const timeOut = 0.2;
 
     try {
       for (let i = 0; i < pairs.length; i++) {
@@ -300,11 +271,11 @@ function TTSGenerator() {
 
         await speakWithRetry(pairs[i].sourceText, selectedSourceVoice);
         if (!isSpeakingRef.current) break;
-        await new Promise((resolve) => setTimeout(resolve, 1000));
+        await new Promise((resolve) => setTimeout(resolve, timeOut));
 
         await speakWithRetry(pairs[i].targetText, selectedTargetVoice);
         if (i < pairs.length - 1) {
-          await new Promise((resolve) => setTimeout(resolve, 2000));
+          await new Promise((resolve) => setTimeout(resolve, 1000));
         }
       }
     } catch (err) {
