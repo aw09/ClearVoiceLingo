@@ -40,6 +40,7 @@ export const SupportedLanguages = [
 ]
 
 export interface LanguageResponse {
+  id: string;
   sourceText: string;
   targetText: string;
   category: {
@@ -54,17 +55,22 @@ export interface LanguageResponse {
 }
 
 export const LanguageResponseSchema = z.object({
-  sourceText: z.string().describe('Original text in source language'),
-  targetText: z.string().describe('Translated text in target language'), 
-  category: z.object({
-    level: z.string().describe('Proficiency level (N1-N5 for Japanese/HSK for Chinese/CEFR for others)'),
-    place: z.string().describe('Location or context where this phrase would be used'),
-    situation: z.string().describe('Usage context (formal/casual/business etc)')
-  }),
-  pronunciation: z.object({
-    romaji: z.string().optional().describe('Romanized text for Japanese/Chinese'),
-    guide: z.string().describe('Pronunciation explanation'), 
-  })
+  result: z.array(
+    z.object({
+      id: z.string().describe('Unique identifier for the translation'),
+      sourceText: z.string().describe('Original text in source language'),
+      targetText: z.string().describe('Translated text in target language'), 
+      category: z.object({
+        level: z.string().describe('Proficiency level (N1-N5 for Japanese/HSK for Chinese/CEFR for others)'),
+        place: z.string().describe('Location or context where this phrase would be used'),
+        situation: z.string().describe('Usage context (formal/casual/business etc)')
+      }),
+      pronunciation: z.object({
+        romaji: z.string().optional().describe('Romanized text for Japanese/Chinese'),
+        guide: z.string().describe('Pronunciation explanation'), 
+      })
+    }) 
+  )
 })
 
 export type SupportedLanguageCode = typeof SupportedLanguages[number]['code'];

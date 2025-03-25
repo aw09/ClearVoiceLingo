@@ -61,7 +61,7 @@ export const generateLanguagePair = async (
   text: string,
   sourceLang: SupportedLanguageCode,
   targetLang: SupportedLanguageCode
-): Promise<LanguageResponse> => {
+): Promise<Array<LanguageResponse>> => {
   const api = getApiInstance();
   const sourceLangName = SupportedLanguages.find((lang) => lang.code === sourceLang)?.name;
   const targetLangName = SupportedLanguages.find((lang) => lang.code === targetLang)?.name;
@@ -77,8 +77,8 @@ export const generateLanguagePair = async (
         content: text
       }
     ]);
-
-    return response;
+    
+    return response.result;
   } catch (error) {
     console.error('Translation failed:', error);
     throw new Error(`Translation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);

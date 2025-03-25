@@ -1,11 +1,12 @@
 // Database utility functions for storing and retrieving language pairs
 import { openDB, DBSchema, IDBPDatabase } from 'idb'
+import { LanguageResponse } from '../models/languages';
 
 // Define types for database schema
 interface ClearVoiceDB extends DBSchema {
   languagePairs: {
     key: string;
-    value: LanguagePair;
+    value: LanguageResponse;
     indexes: { timestamp: string };
   };
   ttsPairs: {
@@ -34,15 +35,7 @@ export interface TTSPair {
   timestamp: string;
 }
 
-// Define types for language pairs
-export interface LanguagePair {
-  id: string;
-  sourceText: string;
-  targetText: string;
-  sourceLang: string;
-  targetLang: string;
-  timestamp: string;
-}
+
 
 // Database name and version
 const DB_NAME = 'clearvoicelingo-db'
@@ -71,7 +64,7 @@ async function openDatabase(): Promise<IDBPDatabase<ClearVoiceDB>> {
 }
 
 // Save language pairs to IndexedDB
-export async function saveLanguagePairs(pairs: LanguagePair[]): Promise<boolean> {
+export async function saveLanguagePairs(pairs: LanguageResponse[]): Promise<boolean> {
   const db = await openDatabase()
   const tx = db.transaction('languagePairs', 'readwrite')
   const store = tx.objectStore('languagePairs')
@@ -86,29 +79,29 @@ export async function saveLanguagePairs(pairs: LanguagePair[]): Promise<boolean>
 }
 
 // Get all language pairs from IndexedDB
-export async function getLanguagePairs(): Promise<LanguagePair[]> {
+export async function getLanguagePairs(): Promise<LanguageResponse[]> {
   const db = await openDatabase()
   return db.getAll('languagePairs')
 }
 
 // Get language pairs by source language
-export async function getPairsBySourceLang(lang: string): Promise<LanguagePair[]> {
+export async function getPairsBySourceLang(lang: string): Promise<LanguageResponse[]> {
   const db = await openDatabase()
   const tx = db.transaction('languagePairs', 'readonly')
   const store = tx.objectStore('languagePairs')
   const pairs = await store.getAll()
   
-  return pairs.filter(pair => pair.sourceLang === lang)
+  return pairs.filter(pair => pair.sourceText === lang)
 }
 
 // Get language pairs by target language
-export async function getPairsByTargetLang(lang: string): Promise<LanguagePair[]> {
+export async function getPairsByTargetLang(lang: string): Promise<LanguageResponse[]> {
   const db = await openDatabase()
   const tx = db.transaction('languagePairs', 'readonly')
   const store = tx.objectStore('languagePairs')
   const pairs = await store.getAll()
   
-  return pairs.filter(pair => pair.targetLang === lang)
+  return pairs.filter(pair => pair.targetText === lang)
 }
 
 // Delete a language pair by ID
