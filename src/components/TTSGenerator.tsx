@@ -22,8 +22,8 @@ import { generateLanguagePair, isApiConfigured } from "../utils/api";
 
 function TTSGenerator() {
   const [text, setText] = useState("");
-  const [sourceLang, setSourceLang] = useState("en");
-  const [targetLang, setTargetLang] = useState("ja");
+  const [sourceLang, setSourceLang] = useState<SupportedLanguageCode>("en");
+  const [targetLang, setTargetLang] = useState<SupportedLanguageCode>("ja");
   const [sourceVoices, setSourceVoices] = useState<Voice[]>([]);
   const [targetVoices, setTargetVoices] = useState<Voice[]>([]);
   const [selectedSourceVoice, setSelectedSourceVoice] = useState<
@@ -123,8 +123,8 @@ function TTSGenerator() {
       // Generate translation using API with the entire text
       const translationResult = await generateLanguagePair(
         text.trim(),
-        sourceLang as SupportedLanguageCode,
-        targetLang as SupportedLanguageCode
+        sourceLang,
+        targetLang
       );
 
       // Process the response which should be in format: source - target
@@ -137,7 +137,7 @@ function TTSGenerator() {
 
       for (const line of responseLines) {
         // Parse the line which should be in format: source - target
-        const parts = line.split("-").map(part => part.trim());
+        const parts = line.split("-").map((part: string) => part.trim());
         
         if (parts.length >= 2) {
           const sourceText = parts[0];
