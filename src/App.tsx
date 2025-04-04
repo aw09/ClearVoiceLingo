@@ -12,7 +12,7 @@ import { configureApi } from './utils/api'
 type TabType = 'tts' | 'flashcards' | 'settings';
 
 function App(): React.ReactElement {
-  const [activeTab, setActiveTab] = useState<TabType>('tts')
+  const [activeTab, setActiveTab] = useState<TabType>('flashcards')
   const [isTTSSupported, setIsTTSSupported] = useState<boolean>(true)
 
   useEffect(() => {

@@ -26,6 +26,7 @@ function AlphabetQuiz({ writingSystemId = 'katakana', onSystemChange }: Alphabet
   const [totalQuestions, setTotalQuestions] = useState(0);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [mnemonic, setMnemonic] = useState<string | null>(null);
+  const [autoAdvance, setAutoAdvance] = useState(true);
 
   // Update selected system when prop changes
   useEffect(() => {
@@ -39,6 +40,8 @@ function AlphabetQuiz({ writingSystemId = 'katakana', onSystemChange }: Alphabet
     setSelectedAnswer(null);
     setIsCorrect(null);
     setShowAnswer(false);
+    setMnemonic(null);
+    setAutoAdvance(true);
     
     if (!selectedSystem || selectedSystem.characters.length === 0) return;
     
@@ -82,7 +85,15 @@ function AlphabetQuiz({ writingSystemId = 'katakana', onSystemChange }: Alphabet
     if (correct) {
       setScore(prevScore => prevScore + 1);
       setMnemonic(null); // No need to show mnemonic for correct answers
+      
+      // Automatically advance to next question after 2 seconds for correct answers
+      setTimeout(() => {
+        generateQuestion();
+      }, 2000);
     } else {
+      // For incorrect answers, don't auto-advance
+      setAutoAdvance(false);
+      
       // If incorrect, check if we have a mnemonic for this character
       if (selectedSystem && currentQuestion) {
         const characterMnemonic = getMnemonicForCharacter(
@@ -95,12 +106,6 @@ function AlphabetQuiz({ writingSystemId = 'katakana', onSystemChange }: Alphabet
     
     setTotalQuestions(prev => prev + 1);
     setShowAnswer(true);
-    
-    // After 3 seconds (increased from 2 to give time to read the mnemonic), move to next question
-    setTimeout(() => {
-      generateQuestion();
-      setMnemonic(null);
-    }, 3000);
   };
 
   // Function to pronounce the current character
@@ -145,6 +150,11 @@ function AlphabetQuiz({ writingSystemId = 'katakana', onSystemChange }: Alphabet
     if (onSystemChange) {
       onSystemChange(newSystemId);
     }
+  };
+
+  // Add a new function to handle manual advancing to the next question
+  const handleNextQuestion = () => {
+    generateQuestion();
   };
 
   if (!selectedSystem || !currentQuestion) {
@@ -244,6 +254,16 @@ function AlphabetQuiz({ writingSystemId = 'katakana', onSystemChange }: Alphabet
               <h4 className="font-medium text-yellow-800 mb-1">Mnemonic Tip:</h4>
               <p className="text-yellow-700">{mnemonic}</p>
             </div>
+          )}
+          
+          {/* Add Next button for incorrect answers */}
+          {!isCorrect && !autoAdvance && (
+            <button 
+              className="mt-6 btn btn-primary"
+              onClick={handleNextQuestion}
+            >
+              Next Question
+            </button>
           )}
         </div>
       )}
