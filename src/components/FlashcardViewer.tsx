@@ -16,7 +16,7 @@ function FlashcardViewer(): React.ReactElement {
   const [error, setError] = useState<string>('')
   const [filterLang, setFilterLang] = useState<string>('')
   const [mode, setMode] = useState<FlashcardMode>('standard')
-  const [selectedWritingSystem, setSelectedWritingSystem] = useState('katakana')
+  const [selectedWritingSystem, setSelectedWritingSystem] = useState('hiragana')
 
   // Load language pairs from IndexedDB
   useEffect(() => {

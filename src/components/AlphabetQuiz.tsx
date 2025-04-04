@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Character, WritingSystem, getWritingSystemById, writingSystems } from '../models/alphabets';
+import { getMnemonicForCharacter } from '../models/mnemonics';
 import { speak, stopSpeaking } from '../utils/tts';
 
 interface QuizQuestion {
@@ -24,6 +25,7 @@ function AlphabetQuiz({ writingSystemId = 'katakana', onSystemChange }: Alphabet
   const [score, setScore] = useState(0);
   const [totalQuestions, setTotalQuestions] = useState(0);
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [mnemonic, setMnemonic] = useState<string | null>(null);
 
   // Update selected system when prop changes
   useEffect(() => {
@@ -79,15 +81,26 @@ function AlphabetQuiz({ writingSystemId = 'katakana', onSystemChange }: Alphabet
     
     if (correct) {
       setScore(prevScore => prevScore + 1);
+      setMnemonic(null); // No need to show mnemonic for correct answers
+    } else {
+      // If incorrect, check if we have a mnemonic for this character
+      if (selectedSystem && currentQuestion) {
+        const characterMnemonic = getMnemonicForCharacter(
+          currentQuestion.character.character, 
+          selectedSystem.id
+        );
+        setMnemonic(characterMnemonic?.mnemonic || null);
+      }
     }
     
     setTotalQuestions(prev => prev + 1);
     setShowAnswer(true);
     
-    // After 2 seconds, move to next question
+    // After 3 seconds (increased from 2 to give time to read the mnemonic), move to next question
     setTimeout(() => {
       generateQuestion();
-    }, 2000);
+      setMnemonic(null);
+    }, 3000);
   };
 
   // Function to pronounce the current character
@@ -225,6 +238,13 @@ function AlphabetQuiz({ writingSystemId = 'katakana', onSystemChange }: Alphabet
           <p className={isCorrect ? "text-green-600 font-medium" : "text-red-600 font-medium"}>
             {isCorrect ? 'Correct!' : `Wrong! The correct answer is ${currentQuestion.correctAnswer}`}
           </p>
+          
+          {!isCorrect && mnemonic && (
+            <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+              <h4 className="font-medium text-yellow-800 mb-1">Mnemonic Tip:</h4>
+              <p className="text-yellow-700">{mnemonic}</p>
+            </div>
+          )}
         </div>
       )}
     </div>
