@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Character, WritingSystem, getWritingSystemById, writingSystems } from '../models/alphabets';
 import { getMnemonicForCharacter } from '../models/mnemonics';
 import { speak, stopSpeaking } from '../utils/tts';
+import { updateQuizStats, getQuizProgress, QuizProgress } from '../utils/db';
 
 interface QuizQuestion {
   character: Character;
@@ -27,11 +28,26 @@ function AlphabetQuiz({ writingSystemId = 'katakana', onSystemChange }: Alphabet
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [mnemonic, setMnemonic] = useState<string | null>(null);
   const [autoAdvance, setAutoAdvance] = useState(true);
+  const [progress, setProgress] = useState<QuizProgress | null>(null);
+  const [streak, setStreak] = useState(0);
 
   // Update selected system when prop changes
   useEffect(() => {
     const system = getWritingSystemById(writingSystemId);
     setSelectedSystem(system);
+    
+    // Load progress for this writing system
+    const loadProgress = async () => {
+      if (system) {
+        const savedProgress = await getQuizProgress(system.id);
+        setProgress(savedProgress);
+        if (savedProgress) {
+          setStreak(savedProgress.streak);
+        }
+      }
+    };
+    
+    loadProgress();
   }, [writingSystemId]);
 
   // Generate a random question based on the selected writing system
@@ -75,12 +91,27 @@ function AlphabetQuiz({ writingSystemId = 'katakana', onSystemChange }: Alphabet
   }, [selectedSystem]);
 
   // Handle answer selection
-  const handleSelectAnswer = (answer: string) => {
+  const handleSelectAnswer = async (answer: string) => {
     if (selectedAnswer !== null) return; // Prevent changing answer once submitted
     
     setSelectedAnswer(answer);
     const correct = answer === currentQuestion?.correctAnswer;
     setIsCorrect(correct);
+    
+    // Update persistent progress
+    if (selectedSystem) {
+      try {
+        const updatedProgress = await updateQuizStats(
+          selectedSystem.id, 
+          selectedSystem.name, 
+          correct
+        );
+        setProgress(updatedProgress);
+        setStreak(updatedProgress.streak);
+      } catch (err) {
+        console.error('Error updating quiz progress:', err);
+      }
+    }
     
     if (correct) {
       setScore(prevScore => prevScore + 1);
@@ -137,14 +168,24 @@ function AlphabetQuiz({ writingSystemId = 'katakana', onSystemChange }: Alphabet
     : 0;
 
   // Handle writing system change
-  const handleSystemChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+  const handleSystemChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
     const newSystemId = e.target.value;
     const system = getWritingSystemById(newSystemId);
     setSelectedSystem(system);
     
-    // Reset scores when changing systems
+    // Reset session scores when changing systems (but keep persistent progress)
     setScore(0);
     setTotalQuestions(0);
+    setStreak(0);
+    
+    // Load progress for new system
+    if (system) {
+      const savedProgress = await getQuizProgress(system.id);
+      setProgress(savedProgress);
+      if (savedProgress) {
+        setStreak(savedProgress.streak);
+      }
+    }
     
     // Notify parent component about the change
     if (onSystemChange) {
@@ -188,17 +229,45 @@ function AlphabetQuiz({ writingSystemId = 'katakana', onSystemChange }: Alphabet
         </select>
       </div>
 
-      <div className="mb-6 flex justify-between items-center">
-        <div>
-          <span className="font-medium">Score: {score}/{totalQuestions}</span>
-          <div className="text-sm text-gray-500">Accuracy: {accuracy}%</div>
+      <div className="mb-6 space-y-4">
+        {/* Current Session Stats */}
+        <div className="flex justify-between items-center">
+          <div>
+            <span className="font-medium">Session: {score}/{totalQuestions}</span>
+            <div className="text-sm text-gray-500">Accuracy: {accuracy}%</div>
+          </div>
+          <button 
+            className="btn btn-secondary"
+            onClick={generateQuestion}
+          >
+            Skip Question
+          </button>
         </div>
-        <button 
-          className="btn btn-secondary"
-          onClick={generateQuestion}
-        >
-          Skip Question
-        </button>
+
+        {/* Persistent Progress Stats */}
+        {progress && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <h4 className="font-semibold text-blue-800 mb-2">Overall Progress</h4>
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <span className="text-blue-600">Total Questions:</span>
+                <span className="ml-2 font-medium">{progress.totalQuestions}</span>
+              </div>
+              <div>
+                <span className="text-blue-600">Best Accuracy:</span>
+                <span className="ml-2 font-medium">{progress.bestAccuracy}%</span>
+              </div>
+              <div>
+                <span className="text-blue-600">Current Streak:</span>
+                <span className="ml-2 font-medium">{streak}</span>
+              </div>
+              <div>
+                <span className="text-blue-600">Overall Accuracy:</span>
+                <span className="ml-2 font-medium">{progress.accuracy}%</span>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="flex flex-col items-center mb-8">
@@ -248,6 +317,13 @@ function AlphabetQuiz({ writingSystemId = 'katakana', onSystemChange }: Alphabet
           <p className={isCorrect ? "text-green-600 font-medium" : "text-red-600 font-medium"}>
             {isCorrect ? 'Correct!' : `Wrong! The correct answer is ${currentQuestion.correctAnswer}`}
           </p>
+          
+          {/* Show streak achievement for correct answers */}
+          {isCorrect && streak > 1 && (
+            <div className="mt-2 inline-flex items-center px-3 py-1 rounded-full text-sm bg-green-100 text-green-800">
+              🔥 {streak} in a row!
+            </div>
+          )}
           
           {!isCorrect && mnemonic && (
             <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">

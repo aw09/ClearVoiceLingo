@@ -28,9 +28,31 @@ export function getVoices(lang?: string): Promise<SpeechSynthesisVoice[]> {
     }
 
     // If voices aren't loaded yet, wait for the voiceschanged event
-    window.speechSynthesis.onvoiceschanged = () => {
-      resolve(getVoiceList())
+    let eventHandled = false
+    
+    const handleVoicesChanged = () => {
+      if (eventHandled) return
+      eventHandled = true
+      
+      const loadedVoices = getVoiceList()
+      resolve(loadedVoices)
     }
+
+    // Add event listener
+    window.speechSynthesis.addEventListener('voiceschanged', handleVoicesChanged)
+
+    // Fallback: resolve with empty array after timeout
+    setTimeout(() => {
+      if (!eventHandled) {
+        eventHandled = true
+        window.speechSynthesis.removeEventListener('voiceschanged', handleVoicesChanged)
+        const finalVoices = getVoiceList()
+        resolve(finalVoices)
+      }
+    }, 3000)
+
+    // Try to trigger voice loading
+    window.speechSynthesis.getVoices()
   })
 }
 

@@ -3,6 +3,7 @@ import { getLanguagePairs, deleteLanguagePair } from '../utils/db'
 import { speak, stopSpeaking } from '../utils/tts'
 import { LanguageResponse } from '../models/languages'
 import AlphabetQuiz from './AlphabetQuiz'
+import ProgressStats from './ProgressStats'
 import { writingSystems } from '../models/alphabets'
 
 type FlashcardMode = 'standard' | 'quiz';
@@ -17,6 +18,7 @@ function FlashcardViewer(): React.ReactElement {
   const [filterLang, setFilterLang] = useState<string>('')
   const [mode, setMode] = useState<FlashcardMode>('quiz')
   const [selectedWritingSystem, setSelectedWritingSystem] = useState('hiragana')
+  const [showProgressStats, setShowProgressStats] = useState(false)
 
   // Load language pairs from IndexedDB
   useEffect(() => {
@@ -116,21 +118,34 @@ function FlashcardViewer(): React.ReactElement {
     <div className="card p-6">
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-xl font-semibold">Flashcards</h2>
-        <div className="inline-flex rounded-md shadow-sm" role="group">
+        <div className="flex gap-2 items-center">
+          {/* Progress Stats Button */}
           <button
             type="button"
-            className={`px-4 py-2 text-sm font-medium ${mode === 'standard' ? 'bg-primary-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'} rounded-l-lg border`}
-            onClick={() => setMode('standard')}
+            className="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+            onClick={() => setShowProgressStats(true)}
+            title="View Progress Statistics"
           >
-            Standard Cards
+            📊 Stats
           </button>
-          <button
-            type="button"
-            className={`px-4 py-2 text-sm font-medium ${mode === 'quiz' ? 'bg-primary-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'} rounded-r-lg border`}
-            onClick={() => setMode('quiz')}
-          >
-            Alphabet Quiz
-          </button>
+          
+          {/* Mode Toggle */}
+          <div className="inline-flex rounded-md shadow-sm" role="group">
+            <button
+              type="button"
+              className={`px-4 py-2 text-sm font-medium ${mode === 'standard' ? 'bg-primary-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'} rounded-l-lg border`}
+              onClick={() => setMode('standard')}
+            >
+              Standard Cards
+            </button>
+            <button
+              type="button"
+              className={`px-4 py-2 text-sm font-medium ${mode === 'quiz' ? 'bg-primary-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'} rounded-r-lg border`}
+              onClick={() => setMode('quiz')}
+            >
+              Alphabet Quiz
+            </button>
+          </div>
         </div>
       </div>
 
@@ -264,6 +279,11 @@ function FlashcardViewer(): React.ReactElement {
             </div>
           )}
         </>
+      )}
+      
+      {/* Progress Stats Modal */}
+      {showProgressStats && (
+        <ProgressStats onClose={() => setShowProgressStats(false)} />
       )}
     </div>
   )

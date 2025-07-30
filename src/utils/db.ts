@@ -2,6 +2,19 @@
 import { openDB, DBSchema, IDBPDatabase } from 'idb'
 import { LanguageResponse } from '../models/languages';
 
+// Define types for quiz progress
+export interface QuizProgress {
+  id: string; // writing system id
+  writingSystem: string;
+  totalQuestions: number;
+  correctAnswers: number;
+  accuracy: number;
+  lastPlayed: string;
+  bestAccuracy: number;
+  streak: number; // current correct streak
+  totalSessions: number;
+}
+
 // Define types for database schema
 interface ClearVoiceDB extends DBSchema {
   languagePairs: {
@@ -13,6 +26,11 @@ interface ClearVoiceDB extends DBSchema {
     key: string;
     value: TTSPair;
     indexes: { timestamp: string };
+  };
+  quizProgress: {
+    key: string;
+    value: QuizProgress;
+    indexes: { lastPlayed: string };
   };
   settings: {
     key: string;
@@ -39,7 +57,7 @@ export interface TTSPair {
 
 // Database name and version
 const DB_NAME = 'clearvoicelingo-db'
-const DB_VERSION = 2
+const DB_VERSION = 3
 
 // Open the database connection
 async function openDatabase(): Promise<IDBPDatabase<ClearVoiceDB>> {
@@ -54,6 +72,11 @@ async function openDatabase(): Promise<IDBPDatabase<ClearVoiceDB>> {
       if (!db.objectStoreNames.contains('ttsPairs')) {
         const ttsStore = db.createObjectStore('ttsPairs', { keyPath: 'id' })
         ttsStore.createIndex('timestamp', 'timestamp')
+      }
+
+      if (!db.objectStoreNames.contains('quizProgress')) {
+        const progressStore = db.createObjectStore('quizProgress', { keyPath: 'id' })
+        progressStore.createIndex('lastPlayed', 'lastPlayed')
       }
       
       if (!db.objectStoreNames.contains('settings')) {
@@ -149,4 +172,74 @@ export async function deleteTTSPair(id: string): Promise<boolean> {
   const db = await openDatabase()
   await db.delete('ttsPairs', id)
   return true
+}
+
+// Save quiz progress to IndexedDB
+export async function saveQuizProgress(progress: QuizProgress): Promise<boolean> {
+  const db = await openDatabase()
+  const tx = db.transaction('quizProgress', 'readwrite')
+  const store = tx.objectStore('quizProgress')
+  await store.put(progress)
+  await tx.done
+  return true
+}
+
+// Get quiz progress by writing system ID
+export async function getQuizProgress(writingSystemId: string): Promise<QuizProgress | null> {
+  const db = await openDatabase()
+  const progress = await db.get('quizProgress', writingSystemId)
+  return progress || null
+}
+
+// Get all quiz progress
+export async function getAllQuizProgress(): Promise<QuizProgress[]> {
+  const db = await openDatabase()
+  return db.getAll('quizProgress')
+}
+
+// Update quiz statistics after a question
+export async function updateQuizStats(
+  writingSystemId: string, 
+  writingSystemName: string, 
+  isCorrect: boolean
+): Promise<QuizProgress> {
+  const existing = await getQuizProgress(writingSystemId)
+  
+  const now = new Date().toISOString()
+  
+  let progress: QuizProgress
+  
+  if (existing) {
+    // Update existing progress
+    const newTotalQuestions = existing.totalQuestions + 1
+    const newCorrectAnswers = existing.correctAnswers + (isCorrect ? 1 : 0)
+    const newAccuracy = Math.round((newCorrectAnswers / newTotalQuestions) * 100)
+    const newStreak = isCorrect ? existing.streak + 1 : 0
+    
+    progress = {
+      ...existing,
+      totalQuestions: newTotalQuestions,
+      correctAnswers: newCorrectAnswers,
+      accuracy: newAccuracy,
+      lastPlayed: now,
+      bestAccuracy: Math.max(existing.bestAccuracy, newAccuracy),
+      streak: newStreak
+    }
+  } else {
+    // Create new progress
+    progress = {
+      id: writingSystemId,
+      writingSystem: writingSystemName,
+      totalQuestions: 1,
+      correctAnswers: isCorrect ? 1 : 0,
+      accuracy: isCorrect ? 100 : 0,
+      lastPlayed: now,
+      bestAccuracy: isCorrect ? 100 : 0,
+      streak: isCorrect ? 1 : 0,
+      totalSessions: 1
+    }
+  }
+  
+  await saveQuizProgress(progress)
+  return progress
 }
