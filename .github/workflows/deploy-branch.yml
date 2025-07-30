@@ -1,0 +1,36 @@
+name: Deploy Branch to GitHub Pages
+
+on:
+  push:
+    branches: [copilot/fix-3f57a8bb-cdae-4081-95f5-1702c4cf6c68]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-deploy-branch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Deploy to GitHub Pages
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          folder: dist
+          branch: gh-pages
+          clean: true
+          commit-message: 'Deploy from branch: copilot/fix-3f57a8bb-cdae-4081-95f5-1702c4cf6c68'
